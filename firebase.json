@@ -1,4 +1,3 @@
 {
-  "firestore": { "rules": "firestore.rules", "location": "australia-southeast1" },
-  "storage": { "rules": "storage.rules" }
+  "firestore": { "rules": "firestore.rules", "location": "australia-southeast1" }
 }

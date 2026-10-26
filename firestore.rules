@@ -5,5 +5,11 @@ service cloud.firestore {
     match /items/{id} {
       allow read, write: if true;
     }
+    // One full-size photo per doc, stored as a JPEG data URL (must fit the 1 MB doc limit)
+    match /photos/{id} {
+      allow read, delete: if true;
+      allow create, update: if request.resource.data.data is string
+                            && request.resource.data.data.size() < 1000000;
+    }
   }
 }
