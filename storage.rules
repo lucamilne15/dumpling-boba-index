@@ -1,0 +1,12 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Anyone with the link can view and add photos (no login, same as the lists).
+    // Uploads must be images under 10 MB.
+    match /photos/{list}/{file} {
+      allow read, delete: if true;
+      allow create, update: if request.resource.size < 10 * 1024 * 1024
+                            && request.resource.contentType.matches('image/.*');
+    }
+  }
+}

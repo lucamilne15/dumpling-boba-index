@@ -135,6 +135,19 @@
     .pill.opt { padding: 0 12px; font-size: 0.88rem; font-weight: 600; background: var(--soft); }
     .pill.opt.selected { background: var(--accent); color: #fff; }
     .sheet-actions { display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 8px; }
+    .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+    .photo { position: relative; aspect-ratio: 1; border-radius: 14px; overflow: hidden; background: var(--soft); box-shadow: 0 2px 8px var(--shadow); }
+    .photo img { width: 100%; height: 100%; object-fit: cover; display: block; cursor: zoom-in; }
+    .photo-x { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border-radius: 50%; border: none; background: rgba(74,51,64,0.7); color: #fff; font-size: 0.8rem; font-weight: 700; cursor: pointer; line-height: 1; }
+    .photo-add { aspect-ratio: 1; border-radius: 14px; border: 2.5px dashed var(--line); background: var(--soft); color: var(--ink-mid); font-size: 0.82rem; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+    .photo-add:hover { border-color: var(--accent); color: var(--ink); }
+    .photo-add span { font-size: 1.4rem; }
+    .photo-count { font-size: 0.72rem; font-weight: 600; color: var(--ink-mid); margin-left: 2px; }
+    .chip-thumb { width: 100%; height: 72px; border-radius: 10px; object-fit: cover; display: block; margin-bottom: 6px; }
+    #lightbox { position: fixed; inset: 0; background: rgba(30,20,26,0.9); display: none; align-items: center; justify-content: center; z-index: 300; padding: 16px; cursor: zoom-out; }
+    #lightbox.open { display: flex; }
+    #lightbox img { max-width: 100%; max-height: 100%; border-radius: 16px; box-shadow: 0 16px 50px rgba(0,0,0,0.4); }
+    .btn-primary:disabled { opacity: 0.6; cursor: wait; }
     .maps-link { font-size: 0.88rem; color: var(--accent-dk); font-weight: 600; text-decoration: none; }
     .hidden { display: none !important; }
 
@@ -249,13 +262,20 @@
       <label for="f-notes">Notes (optional)</label>
       <textarea id="f-notes" placeholder="Would you go back?"></textarea>
     </div>
+    <div class="form-group">
+      <div class="label">Photos</div>
+      <div class="photo-grid" id="f-photos"></div>
+      <input type="file" id="f-photo-input" accept="image/*" multiple class="hidden" onchange="addPhotos([...this.files]); this.value = ''" />
+    </div>
     <div class="sheet-actions">
       <button class="btn-danger" id="delete-btn" onclick="deleteItem()">Delete</button>
       <button class="btn-ghost" onclick="closeSheet()">Cancel</button>
-      <button class="btn-primary" onclick="saveItem()">Save</button>
+      <button class="btn-primary" id="save-btn" onclick="saveItem()">Save</button>
     </div>
   </div>
 </div>
+
+<div id="lightbox" onclick="this.classList.remove('open')"><img id="lightbox-img" alt="" /></div>
 
 <div id="toast"></div>
 
@@ -315,13 +335,25 @@
     const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
     const { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot }
       = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-    const db = getFirestore(initializeApp(FIREBASE_CONFIG));
+    const { getStorage, ref, uploadBytes, getDownloadURL, deleteObject }
+      = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js');
+    const app = initializeApp(FIREBASE_CONFIG);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
     store = {
       shared: true,
       subscribe: cb => onSnapshot(collection(db, 'items'), snap => cb(snap.docs.map(d => ({ id: d.id, ...d.data() })))),
       add: data => addDoc(collection(db, 'items'), data),
       update: (id, data) => updateDoc(doc(db, 'items', id), data),
       remove: id => deleteDoc(doc(db, 'items', id)),
+      // Photos live in Firebase Storage; the item keeps { url, path } for each one
+      uploadPhoto: async blob => {
+        const path = `photos/${currentList}/${crypto.randomUUID()}.jpg`;
+        const r = ref(storage, path);
+        await uploadBytes(r, blob, { contentType: 'image/jpeg' });
+        return { url: await getDownloadURL(r), path };
+      },
+      removePhoto: path => deleteObject(ref(storage, path)).catch(() => {}),
     };
   } else {
     const KEY = 'dumpling_boba_items';
@@ -334,6 +366,14 @@
       add: async data => write([...read(), { id: crypto.randomUUID(), ...data }]),
       update: async (id, data) => write(read().map(i => i.id === id ? { ...i, ...data } : i)),
       remove: async id => write(read().filter(i => i.id !== id)),
+      // No cloud storage here: keep the (already shrunk) photo inline as a data URL
+      uploadPhoto: blob => new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve({ url: r.result, path: '' });
+        r.onerror = reject;
+        r.readAsDataURL(blob);
+      }),
+      removePhoto: async () => {},
     };
   }
 
@@ -389,11 +429,13 @@
           `<span class="vote">${personDot(p)}<span class="vote-tier" style="background:var(--tier-${i.ratings[p]})">${i.ratings[p]}</span></span>`
         ).join('');
         const price = i.price ? `<span class="price">$${fmtPrice(i.price)}</span>` : '';
+        const photos = i.photos || [];
         return `
           <button class="item" onclick="openSheet('${i.id}')">
+            ${photos.length ? `<img class="chip-thumb" src="${esc(photos[0].url)}" alt="" loading="lazy" />` : ''}
             <div class="item-name">${esc(i.name)}</div>
             ${i.place ? `<div class="item-place">📍 ${esc(i.place)}</div>` : ''}
-            <div class="item-meta">${votes}${price}</div>
+            <div class="item-meta">${votes}${price}${photos.length ? `<span class="photo-count">📷 ${photos.length}</span>` : ''}</div>
           </button>`;
       }).join('');
       return `
@@ -407,6 +449,7 @@
     document.getElementById('shelf').innerHTML = wishes.length
       ? wishes.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)).map(i => `
           <button class="wish" onclick="openSheet('${i.id}')">
+            ${i.photos?.length ? `<img class="chip-thumb" src="${esc(i.photos[0].url)}" alt="" loading="lazy" />` : ''}
             <div class="item-name">${esc(i.name)}</div>
             ${i.place ? `<div class="item-place">📍 ${esc(i.place)}</div>` : ''}
           </button>`).join('')
@@ -437,6 +480,56 @@
       `<button type="button" class="pill opt ${form.ice === s ? 'selected' : ''}" onclick="pickOpt('ice', '${s}')">${s}</button>`).join('');
   }
 
+  /* ---- Photos: kept ones are { url, path }, new ones { blob, url: objectURL } until saved ---- */
+  function renderPhotos() {
+    document.getElementById('f-photos').innerHTML = form.photos.map((ph, idx) => `
+      <div class="photo">
+        <img src="${esc(ph.url)}" alt="" onclick="viewPhoto(${idx})" />
+        <button type="button" class="photo-x" onclick="removePhoto(${idx})" aria-label="Remove photo">✕</button>
+      </div>`).join('') + `
+      <button type="button" class="photo-add" onclick="document.getElementById('f-photo-input').click()"><span>📷</span>Add</button>`;
+  }
+
+  // Shrink to max 1600px JPEG so uploads are quick and storage stays small
+  function shrinkImage(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const src = URL.createObjectURL(file);
+      img.onload = () => {
+        const scale = Math.min(1, 1600 / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(src);
+        canvas.toBlob(b => b ? resolve(b) : reject(new Error('Could not read image')), 'image/jpeg', 0.82);
+      };
+      img.onerror = () => { URL.revokeObjectURL(src); reject(new Error(`Could not read ${file.name}`)); };
+      img.src = src;
+    });
+  }
+
+  window.addPhotos = async files => {
+    for (const file of files) {
+      try {
+        const blob = await shrinkImage(file);
+        form.photos.push({ blob, url: URL.createObjectURL(blob) });
+      } catch (e) {
+        alert(e.message);
+      }
+    }
+    renderPhotos();
+  };
+  window.removePhoto = idx => {
+    const [ph] = form.photos.splice(idx, 1);
+    if (ph.blob) URL.revokeObjectURL(ph.url);
+    renderPhotos();
+  };
+  window.viewPhoto = idx => {
+    document.getElementById('lightbox-img').src = form.photos[idx].url;
+    document.getElementById('lightbox').classList.add('open');
+  };
+
   window.setTried = v => { form.tried = v; renderSheetPills(); };
   window.pickRating = (pi, t) => {
     const p = PEOPLE[pi];
@@ -454,6 +547,7 @@
       ratings: { ...(editing?.ratings || {}) },
       sugar: editing?.sugar || '',
       ice: editing?.ice || '',
+      photos: [...(editing?.photos || [])],
     };
     document.getElementById('sheet-title').textContent = editing ? `${cfg.emoji} Edit ${cfg.noun}` : `${cfg.emoji} Add a ${cfg.noun}`;
     document.getElementById('f-name-label').textContent = cfg.nameLabel;
@@ -473,11 +567,13 @@
     mapsOpen.href = editing?.mapsUrl || '#';
     document.getElementById('delete-btn').classList.toggle('hidden', !editing);
     renderSheetPills();
+    renderPhotos();
     document.getElementById('overlay').classList.add('open');
     if (!editing) document.getElementById('f-name').focus();
   };
 
   window.closeSheet = function() {
+    form.photos?.forEach(ph => { if (ph.blob) URL.revokeObjectURL(ph.url); });
     document.getElementById('overlay').classList.remove('open');
     editing = null;
   };
@@ -503,10 +599,18 @@
       mapsUrl,
       notes: document.getElementById('f-notes').value.trim(),
     };
+    const saveBtn = document.getElementById('save-btn');
+    const newCount = form.photos.filter(ph => ph.blob).length;
+    saveBtn.disabled = true;
+    saveBtn.textContent = newCount ? `Uploading ${newCount} photo${newCount > 1 ? 's' : ''}…` : 'Saving…';
     try {
       const cfg = LISTS[currentList];
+      data.photos = await Promise.all(form.photos.map(ph => ph.blob ? store.uploadPhoto(ph.blob) : { url: ph.url, path: ph.path }));
+      const kept = new Set(data.photos.map(ph => ph.path));
+      const dropped = (editing?.photos || []).filter(ph => ph.path && !kept.has(ph.path));
       if (editing) {
         await store.update(editing.id, data);
+        dropped.forEach(ph => store.removePhoto(ph.path));
         showToast('Saved ✨');
       } else {
         await store.add({ ...data, list: currentList, createdAt: Date.now() });
@@ -515,17 +619,26 @@
       closeSheet();
     } catch (e) {
       alert('Failed to save: ' + e.message);
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save';
     }
   };
 
   window.deleteItem = async function() {
     if (!editing || !confirm(`Delete "${editing.name}"?`)) return;
+    const photos = editing.photos || [];
     await store.remove(editing.id);
+    photos.forEach(ph => ph.path && store.removePhoto(ph.path));
     closeSheet();
     showToast('Deleted');
   };
 
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') window.closeSheet(); });
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    const lb = document.getElementById('lightbox');
+    if (lb.classList.contains('open')) lb.classList.remove('open'); else window.closeSheet();
+  });
 
   /* ---- Toast ---- */
   function showToast(msg) {
