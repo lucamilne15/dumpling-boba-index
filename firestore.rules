@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Anyone with the link can read and edit the lists (no login, like coffee-fridays)
+    match /items/{id} {
+      allow read, write: if true;
+    }
+  }
+}
