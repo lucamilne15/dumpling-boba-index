@@ -125,6 +125,10 @@
     .rate-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
     .rate-who { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 0.95rem; min-width: 0; }
     .rate-who .vote-dot { width: 24px; height: 24px; font-size: 0.8rem; flex-shrink: 0; }
+    .drink-box { background: var(--soft); border-radius: 18px; padding: 12px 14px; margin-bottom: 14px; }
+    .drink-box .rate-who { margin-bottom: 10px; }
+    .drink-box .form-group:last-child { margin-bottom: 0; }
+    .drink-box input, .drink-box .pill.opt:not(.selected) { background: var(--card); }
     .combined { font-size: 0.85rem; color: var(--ink-mid); text-align: center; }
     .combined b { color: var(--ink); }
 
@@ -233,20 +237,7 @@
           <div class="price-wrap"><span>$</span><input type="number" id="f-price" min="0" step="0.5" inputmode="decimal" placeholder="0.00" /></div>
         </div>
       </div>
-      <div id="boba-fields">
-        <div class="form-group">
-          <div class="label">Sugar</div>
-          <div class="pill-row" id="f-sugar"></div>
-        </div>
-        <div class="form-group">
-          <div class="label">Ice</div>
-          <div class="pill-row" id="f-ice"></div>
-        </div>
-        <div class="form-group">
-          <label for="f-toppings">Toppings</label>
-          <input type="text" id="f-toppings" placeholder="e.g. Pearls, cheese foam" />
-        </div>
-      </div>
+      <div id="boba-fields"></div>
       <div class="form-group" id="ordered-group">
         <label for="f-ordered">What we ordered</label>
         <input type="text" id="f-ordered" placeholder="e.g. 10 pork xiaolongbao, chilli wontons" />
@@ -474,10 +465,12 @@
       ? `Lands in <b>${combo} tier</b>${Object.keys(form.ratings).length > 1 ? ` (avg ${avgScore(form.ratings).toFixed(1)} / 5)` : ''}`
       : 'Tap a tier for each of you — tap again to clear';
 
-    document.getElementById('f-sugar').innerHTML = SUGAR.map(s =>
-      `<button type="button" class="pill opt ${form.sugar === s ? 'selected' : ''}" onclick="pickOpt('sugar', '${s}')">${s}</button>`).join('');
-    document.getElementById('f-ice').innerHTML = ICE.map(s =>
-      `<button type="button" class="pill opt ${form.ice === s ? 'selected' : ''}" onclick="pickOpt('ice', '${s}')">${s}</button>`).join('');
+    PEOPLE.forEach((p, pi) => {
+      document.getElementById(`f-sugar-${pi}`).innerHTML = SUGAR.map(s =>
+        `<button type="button" class="pill opt ${form.sugar[p] === s ? 'selected' : ''}" onclick="pickOpt('sugar', ${pi}, '${s}')">${s}</button>`).join('');
+      document.getElementById(`f-ice-${pi}`).innerHTML = ICE.map(s =>
+        `<button type="button" class="pill opt ${form.ice[p] === s ? 'selected' : ''}" onclick="pickOpt('ice', ${pi}, '${s}')">${s}</button>`).join('');
+    });
   }
 
   /* ---- Photos: kept ones are { url, path }, new ones { blob, url: objectURL } until saved ---- */
@@ -536,7 +529,18 @@
     if (form.ratings[p] === t) delete form.ratings[p]; else form.ratings[p] = t;
     renderSheetPills();
   };
-  window.pickOpt = (key, v) => { form[key] = form[key] === v ? '' : v; renderSheetPills(); };
+  window.pickOpt = (key, pi, v) => {
+    const p = PEOPLE[pi];
+    if (form[key][p] === v) delete form[key][p]; else form[key][p] = v;
+    renderSheetPills();
+  };
+
+  // Sugar, ice and toppings are per person ({ Luca: '50%', Emma: '25%' }).
+  // Older entries stored one shared string, so treat that as both people's.
+  function perPerson(v) {
+    if (v && typeof v === 'object') return { ...v };
+    return v ? Object.fromEntries(PEOPLE.map(p => [p, v])) : {};
+  }
 
   window.openSheet = function(id) {
     editing = id ? allItems.find(i => i.id === id) : null;
@@ -545,8 +549,8 @@
     form = {
       tried: editing ? editing.tried !== false && !!combinedTier(editing.ratings) : true,
       ratings: { ...(editing?.ratings || {}) },
-      sugar: editing?.sugar || '',
-      ice: editing?.ice || '',
+      sugar: perPerson(editing?.sugar),
+      ice: perPerson(editing?.ice),
       photos: [...(editing?.photos || [])],
     };
     document.getElementById('sheet-title').textContent = editing ? `${cfg.emoji} Edit ${cfg.noun}` : `${cfg.emoji} Add a ${cfg.noun}`;
@@ -556,7 +560,23 @@
     document.getElementById('f-place').value = editing?.place || '';
     document.getElementById('f-date').value = editing?.date || new Date().toLocaleDateString('en-CA');
     document.getElementById('f-price').value = editing?.price ?? '';
-    document.getElementById('f-toppings').value = editing?.toppings || '';
+    const toppings = perPerson(editing?.toppings);
+    document.getElementById('boba-fields').innerHTML = PEOPLE.map((p, pi) => `
+      <div class="drink-box">
+        <div class="rate-who">${personDot(p)}${esc(p)}'s drink</div>
+        <div class="form-group">
+          <div class="label">Sugar</div>
+          <div class="pill-row" id="f-sugar-${pi}"></div>
+        </div>
+        <div class="form-group">
+          <div class="label">Ice</div>
+          <div class="pill-row" id="f-ice-${pi}"></div>
+        </div>
+        <div class="form-group">
+          <label for="f-toppings-${pi}">Toppings</label>
+          <input type="text" id="f-toppings-${pi}" placeholder="e.g. Pearls, cheese foam" value="${esc(toppings[p])}" />
+        </div>
+      </div>`).join('');
     document.getElementById('f-ordered').value = editing?.ordered || '';
     document.getElementById('f-maps').value = editing?.mapsUrl || '';
     document.getElementById('f-notes').value = editing?.notes || '';
@@ -592,9 +612,11 @@
       ratings: form.tried ? form.ratings : {},
       date: form.tried ? document.getElementById('f-date').value : '',
       price: form.tried && price > 0 ? price : null,
-      sugar: form.tried ? form.sugar : '',
-      ice: form.tried ? form.ice : '',
-      toppings: form.tried ? document.getElementById('f-toppings').value.trim() : '',
+      sugar: form.tried ? form.sugar : {},
+      ice: form.tried ? form.ice : {},
+      toppings: form.tried ? Object.fromEntries(PEOPLE
+        .map((p, pi) => [p, document.getElementById(`f-toppings-${pi}`).value.trim()])
+        .filter(([, t]) => t)) : {},
       ordered: form.tried ? document.getElementById('f-ordered').value.trim() : '',
       mapsUrl,
       notes: document.getElementById('f-notes').value.trim(),
