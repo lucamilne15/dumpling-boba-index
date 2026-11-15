@@ -74,6 +74,15 @@
       --accent-dk: #36948A;
       --accent-lt: #D2F0EB;
     }
+    body.burgers {
+      --bg:        #FFF4EF;
+      --dot:       #FBDCCF;
+      --soft:      #FFEDE5;
+      --line:      #F6D3C4;
+      --accent:    #E2563B;
+      --accent-dk: #C4412A;
+      --accent-lt: #FFDCD0;
+    }
     body.happyhour {
       --bg:        #FFF2F6;
       --dot:       #FCDDE8;
@@ -266,6 +275,7 @@
     <button onclick="showList('banhmi')" id="nav-banhmi">🥖 Banh Mi</button>
     <button onclick="showList('brunch')" id="nav-brunch">🥞 Brunch</button>
     <button onclick="showList('bowls')" id="nav-bowls">🍜 Warm Bowls</button>
+    <button onclick="showList('burgers')" id="nav-burgers">🍔 Burgers</button>
     <button onclick="showList('happyhour')" id="nav-happyhour">🍹 Happy Hour</button>
   </nav>
 </header>
@@ -422,6 +432,18 @@
       <path d="M29 43q3 3 6 0" stroke="#4A3340" stroke-width="2" stroke-linecap="round" fill="none"/>
       <ellipse cx="20" cy="45" rx="3" ry="1.8" fill="#FF9AA8" opacity="0.7"/><ellipse cx="44" cy="45" rx="3" ry="1.8" fill="#FF9AA8" opacity="0.7"/>
     </svg>`,
+    burgers: `<svg viewBox="0 0 64 64" aria-hidden="true">
+      <ellipse cx="32" cy="58" rx="24" ry="3.5" fill="#000" opacity="0.07"/>
+      <path d="M8 46h48c0 6-5 9-11 9H19c-6 0-11-3-11-9z" fill="#F2B866" stroke="#4A3340" stroke-width="2.5" stroke-linejoin="round"/>
+      <rect x="6" y="38" width="52" height="8" rx="4" fill="#8A4B32" stroke="#4A3340" stroke-width="2.5"/>
+      <path d="M9 38l7 6 7-6 7 6 7-6 7 6 7-6 7 6" fill="#FFD25A" stroke="#4A3340" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M6 37q4-5 8 0t8 0t8 0t8 0t8 0t8 0t8 0" fill="#9ED37E" stroke="#4A3340" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M6 33c0-13 11-22 26-22s26 9 26 22c0 2-2 3-4 3H10c-2 0-4-1-4-3z" fill="#F7C477" stroke="#4A3340" stroke-width="2.5" stroke-linejoin="round"/>
+      <path d="M20 18l2 1M30 15l2 .5M42 18l-2 1M36 20l1.5 1" stroke="#FFF6E0" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="25" cy="26" r="2.4" fill="#4A3340"/><circle cx="39" cy="26" r="2.4" fill="#4A3340"/>
+      <path d="M29 29q3 3 6 0" stroke="#4A3340" stroke-width="2" stroke-linecap="round" fill="none"/>
+      <ellipse cx="20" cy="30" rx="3" ry="1.7" fill="#FF9AA8" opacity="0.75"/><ellipse cx="44" cy="30" rx="3" ry="1.7" fill="#FF9AA8" opacity="0.75"/>
+    </svg>`,
     happyhour: `<svg viewBox="0 0 64 64" aria-hidden="true">
       <ellipse cx="32" cy="59" rx="16" ry="3" fill="#000" opacity="0.07"/>
       <path d="M40 2l-8 22" stroke="#4A3340" stroke-width="5" stroke-linecap="round"/>
@@ -447,6 +469,8 @@
                  place: 'e.g. Bills, Surry Hills', ordered: 'e.g. Ricotta hotcakes, smashed avo, 2 flat whites' },
     bowls:     { title: 'Warm Asian Bowl Index', noun: 'warm bowl', emoji: '🍜', nameLabel: 'Bowl', placeholder: 'e.g. Pho, tonkotsu ramen, katsu curry, laksa',
                  place: 'e.g. Ippudo, Central Park', ordered: 'e.g. Rare beef pho, extra bean sprouts' },
+    burgers:   { title: 'Burger Index', noun: 'burger', emoji: '🍔', nameLabel: 'Burger', placeholder: 'e.g. Double smash burger',
+                 place: 'e.g. Mary\'s, Newtown', ordered: 'e.g. Double cheese, fries, a vanilla shake' },
     happyhour: { title: 'Happy Hour Index', noun: 'happy hour', emoji: '🍹', nameLabel: 'Happy hour', placeholder: 'e.g. $10 spritzes, 4–6pm weekdays',
                  place: 'e.g. The Glenmore, The Rocks', ordered: 'e.g. 2 Aperol spritzes, a jug of margs, fries' },
   };
