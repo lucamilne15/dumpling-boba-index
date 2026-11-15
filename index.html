@@ -4,6 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>The Snack Index 🥟🧋🥖🥞🍜🍹</title>
+  <!-- Home-screen app: Safari → Share → Add to Home Screen -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Snack Index">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#FFF6F0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -214,7 +223,10 @@
     .photo-add:hover { border-color: var(--accent); color: var(--ink); }
     .photo-add span { font-size: 1.4rem; }
     .photo-count { font-size: 0.72rem; font-weight: 600; color: var(--ink-mid); margin-left: 2px; }
-    .chip-thumb { width: 100%; height: 72px; border-radius: 10px; object-fit: cover; display: block; margin-bottom: 6px; }
+    /* Photo chips: small square thumb on the left, text beside it */
+    .item.has-thumb, .wish.has-thumb { display: flex; align-items: center; gap: 9px; padding-left: 7px; }
+    .chip-thumb { width: 54px; height: 54px; flex-shrink: 0; border-radius: 12px; object-fit: cover; display: block; background: var(--soft); }
+    .chip-body { min-width: 0; flex: 1; }
     #lightbox { position: fixed; inset: 0; background: rgba(30,20,26,0.9); display: none; align-items: center; justify-content: center; z-index: 300; padding: 16px; cursor: zoom-out; }
     #lightbox.open { display: flex; }
     #lightbox img { max-width: 100%; max-height: 100%; border-radius: 16px; box-shadow: 0 16px 50px rgba(0,0,0,0.4); }
@@ -571,11 +583,13 @@
         const price = i.price ? `<span class="price">$${fmtPrice(i.price)}</span>` : '';
         const photos = i.photos || [];
         return `
-          <button class="item" onclick="openSheet('${i.id}')">
+          <button class="item${photos.length ? ' has-thumb' : ''}" onclick="openSheet('${i.id}')">
             ${photos.length ? `<img class="chip-thumb" src="${esc(photos[0].thumb)}" alt="" loading="lazy" />` : ''}
-            <div class="item-name">${esc(i.name)}</div>
-            ${i.place ? `<div class="item-place">📍 ${esc(i.place)}</div>` : ''}
-            <div class="item-meta">${votes}${price}${photos.length ? `<span class="photo-count">📷 ${photos.length}</span>` : ''}</div>
+            <div class="chip-body">
+              <div class="item-name">${esc(i.name)}</div>
+              ${i.place ? `<div class="item-place">📍 ${esc(i.place)}</div>` : ''}
+              <div class="item-meta">${votes}${price}${photos.length > 1 ? `<span class="photo-count">📷 ${photos.length}</span>` : ''}</div>
+            </div>
           </button>`;
       }).join('');
       return `
@@ -588,10 +602,12 @@
     document.getElementById('wish-count').textContent = wishes.length ? `${wishes.length} to go` : '';
     document.getElementById('shelf').innerHTML = wishes.length
       ? wishes.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)).map(i => `
-          <button class="wish" onclick="openSheet('${i.id}')">
+          <button class="wish${i.photos?.length ? ' has-thumb' : ''}" onclick="openSheet('${i.id}')">
             ${i.photos?.length ? `<img class="chip-thumb" src="${esc(i.photos[0].thumb)}" alt="" loading="lazy" />` : ''}
-            <div class="item-name">${esc(i.name)}</div>
-            ${i.place ? `<div class="item-place">📍 ${esc(i.place)}</div>` : ''}
+            <div class="chip-body">
+              <div class="item-name">${esc(i.name)}</div>
+              ${i.place ? `<div class="item-place">📍 ${esc(i.place)}</div>` : ''}
+            </div>
           </button>`).join('')
       : `<div class="shelf-empty">Nothing on the wishlist — add a ${cfg.noun} you've heard about ${cfg.emoji}</div>`;
   }
