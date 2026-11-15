@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>The Snack Index 🥟🧋🥖🥞🍜🍹</title>
   <!-- Home-screen app: Safari → Share → Add to Home Screen -->
   <link rel="manifest" href="manifest.webmanifest">
@@ -133,16 +133,28 @@
     }
 
     /* Header */
-    header { padding: 14px 16px 0; max-width: 820px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    header { padding: 14px 16px 0; max-width: 820px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 12px; }
     .logo { display: flex; align-items: center; gap: 6px; font-size: 1.35rem; font-weight: 700; white-space: nowrap; }
     .logo svg { width: 38px; height: 38px; }
-    nav { display: flex; gap: 4px; max-width: 100%; overflow-x: auto; scrollbar-width: none; background: var(--card); padding: 5px; border-radius: 999px; box-shadow: 0 3px 14px var(--shadow); }
-    nav button { background: none; border: none; color: var(--ink-mid); padding: 9px 16px; border-radius: 999px; cursor: pointer; font-size: 0.95rem; font-weight: 600; transition: all 0.2s; white-space: nowrap; }
-    nav::-webkit-scrollbar { display: none; }
-    nav button:hover { color: var(--ink); }
-    nav button.active { color: #fff; background: var(--accent); box-shadow: 0 3px 10px var(--shadow); }
+    /* Bottom dock: every list's mascot in one thumb-reachable bar; the current one is named underneath */
+    #dock { position: fixed; z-index: 150; left: 50%; transform: translateX(-50%);
+            bottom: calc(10px + env(safe-area-inset-bottom)); width: min(560px, calc(100% - 20px));
+            display: grid; grid-template-columns: repeat(var(--n, 7), 1fr); gap: 2px; padding: 6px;
+            background: color-mix(in srgb, var(--card) 92%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border-radius: 26px; box-shadow: 0 8px 28px var(--shadow), 0 0 0 1px var(--line); }
+    #dock button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 56px; min-width: 0;
+                   padding: 6px 0 4px; border: none; border-radius: 20px; background: none; cursor: pointer; font: inherit;
+                   -webkit-tap-highlight-color: transparent; transition: background 0.2s; }
+    #dock svg { width: 30px; height: 30px; opacity: 0.72; filter: saturate(0.75); transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), opacity 0.2s; }
+    #dock span { font-size: 0.66rem; font-weight: 700; color: var(--accent-dk); white-space: nowrap; line-height: 1; display: none; }
+    #dock button:active svg { transform: scale(0.9); }
+    #dock button.active { background: var(--accent-lt); }
+    #dock button.active svg { opacity: 1; filter: none; transform: translateY(-1px) scale(1.08); }
+    #dock button.active span { display: block; }
+    @media (hover: hover) { #dock button:hover svg { opacity: 0.9; } }
+    @media (max-width: 360px) { #dock { width: calc(100% - 12px); padding: 4px; } #dock svg { width: 26px; height: 26px; } #dock span { font-size: 0.6rem; } }
 
-    main { max-width: 820px; margin: 0 auto; padding: 22px 16px 80px; }
+    main { max-width: 820px; margin: 0 auto; padding: 22px 16px calc(110px + env(safe-area-inset-bottom)); }
 
     .list-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
     .list-head-title { display: flex; align-items: center; gap: 10px; }
@@ -246,13 +258,11 @@
     .storage-note { font-size: 0.82rem; color: var(--ink-mid); text-align: center; margin-top: 26px; }
 
     /* Toast */
-    #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(90px); background: var(--ink); color: #fff; padding: 12px 24px; border-radius: 999px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,0.2); transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1); z-index: 999; pointer-events: none; white-space: nowrap; }
+    #toast { position: fixed; bottom: calc(92px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%) translateY(200px); background: var(--ink); color: #fff; padding: 12px 24px; border-radius: 999px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,0.2); transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1); z-index: 999; pointer-events: none; white-space: nowrap; }
     #toast.show { transform: translateX(-50%) translateY(0); }
 
     @media (max-width: 560px) {
-      header { justify-content: center; }
       .logo { font-size: 1.2rem; }
-      nav button { padding: 8px 13px; font-size: 0.9rem; }
       .tier-label { width: 48px; font-size: 1.5rem; margin: 5px; }
       .item { max-width: 100%; }
       h2 { font-size: 1.3rem; }
@@ -269,16 +279,8 @@
 
 <header>
   <div class="logo"><span id="logo-art"></span>The Snack Index</div>
-  <nav>
-    <button onclick="showList('dumplings')" id="nav-dumplings" class="active">🥟 Dumplings</button>
-    <button onclick="showList('boba')" id="nav-boba">🧋 Bubble Tea</button>
-    <button onclick="showList('banhmi')" id="nav-banhmi">🥖 Banh Mi</button>
-    <button onclick="showList('brunch')" id="nav-brunch">🥞 Brunch</button>
-    <button onclick="showList('bowls')" id="nav-bowls">🍜 Warm Bowls</button>
-    <button onclick="showList('burgers')" id="nav-burgers">🍔 Burgers</button>
-    <button onclick="showList('happyhour')" id="nav-happyhour">🍹 Happy Hour</button>
-  </nav>
 </header>
+<nav id="dock" aria-label="Lists"></nav>
 
 <main>
   <div class="list-head">
@@ -459,19 +461,19 @@
   };
 
   const LISTS = {
-    dumplings: { title: 'Dumpling Index', noun: 'dumpling', emoji: '🥟', nameLabel: 'Dumpling', placeholder: 'e.g. Pork & chive xiaolongbao',
+    dumplings: { short: 'Dumplings', title: 'Dumpling Index', noun: 'dumpling', emoji: '🥟', nameLabel: 'Dumpling', placeholder: 'e.g. Pork & chive xiaolongbao',
                  place: 'e.g. Din Tai Fung, Chinatown', ordered: 'e.g. 10 pork xiaolongbao, chilli wontons' },
-    boba:      { title: 'Bubble Tea Index', noun: 'bubble tea', emoji: '🧋', nameLabel: 'Drink', placeholder: 'e.g. Brown sugar milk tea',
+    boba:      { short: 'Boba', title: 'Bubble Tea Index', noun: 'bubble tea', emoji: '🧋', nameLabel: 'Drink', placeholder: 'e.g. Brown sugar milk tea',
                  place: 'e.g. Gong Cha, Haymarket' },
-    banhmi:    { title: 'Banh Mi Index', noun: 'banh mi', emoji: '🥖', nameLabel: 'Banh mi', placeholder: 'e.g. Crispy pork belly banh mi',
+    banhmi:    { short: 'Banh Mi', title: 'Banh Mi Index', noun: 'banh mi', emoji: '🥖', nameLabel: 'Banh mi', placeholder: 'e.g. Crispy pork belly banh mi',
                  place: 'e.g. Marrickville Pork Roll', ordered: 'e.g. Pork roll with extra chilli, no coriander' },
-    brunch:    { title: 'Brunch Index', noun: 'brunch', emoji: '🥞', nameLabel: 'Brunch', placeholder: 'e.g. Chilli scrambled eggs',
+    brunch:    { short: 'Brunch', title: 'Brunch Index', noun: 'brunch', emoji: '🥞', nameLabel: 'Brunch', placeholder: 'e.g. Chilli scrambled eggs',
                  place: 'e.g. Bills, Surry Hills', ordered: 'e.g. Ricotta hotcakes, smashed avo, 2 flat whites' },
-    bowls:     { title: 'Warm Asian Bowl Index', noun: 'warm bowl', emoji: '🍜', nameLabel: 'Bowl', placeholder: 'e.g. Pho, tonkotsu ramen, katsu curry, laksa',
+    bowls:     { short: 'Bowls', title: 'Warm Asian Bowl Index', noun: 'warm bowl', emoji: '🍜', nameLabel: 'Bowl', placeholder: 'e.g. Pho, tonkotsu ramen, katsu curry, laksa',
                  place: 'e.g. Ippudo, Central Park', ordered: 'e.g. Rare beef pho, extra bean sprouts' },
-    burgers:   { title: 'Burger Index', noun: 'burger', emoji: '🍔', nameLabel: 'Burger', placeholder: 'e.g. Double smash burger',
+    burgers:   { short: 'Burgers', title: 'Burger Index', noun: 'burger', emoji: '🍔', nameLabel: 'Burger', placeholder: 'e.g. Double smash burger',
                  place: 'e.g. Mary\'s, Newtown', ordered: 'e.g. Double cheese, fries, a vanilla shake' },
-    happyhour: { title: 'Happy Hour Index', noun: 'happy hour', emoji: '🍹', nameLabel: 'Happy hour', placeholder: 'e.g. $10 spritzes, 4–6pm weekdays',
+    happyhour: { short: 'Happy Hr', title: 'Happy Hour Index', noun: 'happy hour', emoji: '🍹', nameLabel: 'Happy hour', placeholder: 'e.g. $10 spritzes, 4–6pm weekdays',
                  place: 'e.g. The Glenmore, The Rocks', ordered: 'e.g. 2 Aperol spritzes, a jug of margs, fries' },
   };
   /* ---- Photo wall: every .jpg in wall/ named 01, 02, 03… — bump WALL_COUNT when adding more ---- */
@@ -565,14 +567,22 @@
   }
 
   /* ---- Navigation ---- */
+  /* ---- Bottom dock, built from LISTS so a new list only needs its LISTS + ART entries ---- */
+  const dock = document.getElementById('dock');
+  dock.style.setProperty('--n', Object.keys(LISTS).length);
+  dock.innerHTML = Object.entries(LISTS).map(([key, cfg]) =>
+    `<button id="nav-${key}" onclick="showList('${key}')" aria-label="${cfg.title}">${ART[key]}<span>${cfg.short}</span></button>`).join('');
+
   window.showList = function(name) {
     currentList = name;
     localStorage.setItem('last_list', name);
     document.body.className = name;
-    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-    const tab = document.getElementById('nav-' + name);
-    tab.classList.add('active');
-    tab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    document.querySelectorAll('#dock button').forEach(b => {
+      const on = b.id === 'nav-' + name;
+      b.classList.toggle('active', on);
+      on ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current');
+    });
+    window.scrollTo({ top: 0 });
     render();
   };
 
